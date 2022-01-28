@@ -2,7 +2,7 @@ import { autoserializeAs, inheritSerialization } from 'cerialize'
 import { ISODateTimeSerializer } from '../utils/cerialize'
 import { PerxBaseInvoiceItem, PerxInvoiceItemType } from './Invoice'
 
-export type PerxTransactionRequestDataType = 'purchase' | 'purchase-fix'
+export type PerxTransactionRequestDataType = 'purchase' | 'purchase-fix' | 'purchase-overall'
 
 /**
  * You may override this class to create your own Custom Transaction Representation.
