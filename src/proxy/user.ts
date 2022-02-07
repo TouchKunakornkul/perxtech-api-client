@@ -129,9 +129,9 @@ export class PerxUserProxy implements IPerxUserProxy {
     return this.perxService.getLoyaltyPrograms(token.accessToken)
   }
 
-  public async queryTransactionsHistory(page: number = 1, perPage: number = 25): Promise<PerxLoyaltyTransactionsHistoryResponse> {
+  public async queryTransactionsHistory(page: number = 1, perPage: number = 25, transactionReference?: string): Promise<PerxLoyaltyTransactionsHistoryResponse> {
     const token = await this.getToken()
-    return this.perxService.queryLoyaltyTransactionsHistory(token.accessToken, page, perPage)
+    return this.perxService.queryLoyaltyTransactionsHistory(token.accessToken, page, perPage, transactionReference)
   }
 
   public async listAllMerchants(page: number = 1, perPage: number = 25, favorite: boolean | undefined = undefined): Promise<PerxMerchantResponse> {
