@@ -200,6 +200,7 @@ export interface IPerxUserProxy {
   queryTransactionsHistory(): Promise<PerxLoyaltyTransactionsHistoryResponse>
   queryTransactionsHistory(page: number): Promise<PerxLoyaltyTransactionsHistoryResponse>
   queryTransactionsHistory(page: number, perPage: number): Promise<PerxLoyaltyTransactionsHistoryResponse>
+  queryTransactionsHistory(page: number, perPage: number, transactionReference?: string): Promise<PerxLoyaltyTransactionsHistoryResponse>
 
   /**
    * Get perx's self customer identity

@@ -282,7 +282,7 @@ export interface IPerxUserService {
    * @param page start with 1
    * @param perPage desinate the page size
    */
-  queryLoyaltyTransactionsHistory(userToken: string, page: number, perPage: number): Promise<PerxLoyaltyTransactionsHistoryResponse>
+  queryLoyaltyTransactionsHistory(userToken: string, page: number, perPage: number, transactionReference?: string): Promise<PerxLoyaltyTransactionsHistoryResponse>
 
   /**
    * Query all merchants from Perx
@@ -807,7 +807,7 @@ export class PerxService implements IPerxService {
     return result
   }
 
-  public async queryLoyaltyTransactionsHistory(userToken: string, page: number, perPage: number): Promise<PerxLoyaltyTransactionsHistoryResponse> {
+  public async queryLoyaltyTransactionsHistory(userToken: string, page: number, perPage: number, transactionReference?: string): Promise<PerxLoyaltyTransactionsHistoryResponse> {
     const resp = await this.axios.get('/v4/loyalty/transactions_history', {
       headers: {
         authorization: `Bearer ${userToken}`,
@@ -815,6 +815,7 @@ export class PerxService implements IPerxService {
       params: {
         page,
         size: perPage,
+        transaction_reference: transactionReference,
       }
     })
 
