@@ -16,8 +16,11 @@ import type {
   PerxCategoriesResultResponse,
   PerxRewardResponse,
   PerxVoucherResponse,
+  PerxMerchant,
+  PerxMerchantsResponse,
 } from '..'
 import { chunk } from 'lodash'
+import { PerxCampaign, PerxCampaignsResponse } from '../models'
 
 export class PerxUserProxy implements IPerxUserProxy {
 
@@ -127,9 +130,24 @@ export class PerxUserProxy implements IPerxUserProxy {
     return this.perxService.getLoyaltyPrograms(token.accessToken)
   }
 
-  public async queryTransactionsHistory(page: number = 1, perPage: number = 25): Promise<PerxLoyaltyTransactionsHistoryResponse> {
+  public async queryTransactionsHistory(page: number = 1, perPage: number = 25, transactionReference?: string): Promise<PerxLoyaltyTransactionsHistoryResponse> {
     const token = await this.getToken()
-    return this.perxService.queryLoyaltyTransactionsHistory(token.accessToken, page, perPage)
+    return this.perxService.queryLoyaltyTransactionsHistory(token.accessToken, page, perPage, transactionReference)
+  }
+
+  public async listAllMerchants(page: number = 1, perPage: number = 25, favorite: boolean | undefined = undefined): Promise<PerxMerchantsResponse> {
+    const token = await this.getToken()
+    return this.perxService.listAllMerchants(token.accessToken, page, perPage, favorite)
+  }
+
+  public async getMerchant(merchantId: number): Promise<PerxMerchant> {
+    const token = await this.getToken()
+    return this.perxService.getMerchant(token.accessToken, merchantId)
+  }
+
+  public async performCustomTrigger(perxCustomTriggerId: string): Promise<void> {
+    const token = await this.getToken()
+    return this.perxService.performCustomTrigger(token.accessToken, perxCustomTriggerId)
   }
 
   private async _forEachVoucher<R>(voucherIds: string[], callback: (token: IPerxToken, voucherId: string) => Promise<R>): Promise<R[]> {
@@ -142,5 +160,16 @@ export class PerxUserProxy implements IPerxUserProxy {
       results = results.concat(r)
     }
     return results
+  }
+
+  public async listAllCampaign(page: number = 1, perPage: number = 25, campaignType: string | undefined = undefined): Promise<PerxCampaignsResponse> {
+    const token = await this.getToken()
+    return this.perxService.listAllCampaign(token.accessToken, page, perPage, campaignType)
+  }
+
+  public async getCampaign(campaignId: number): Promise<PerxCampaign> {
+    const token = await this.getToken()
+    const result = await this.perxService.getCampaign(token.accessToken, campaignId)
+    return result
   }
 }

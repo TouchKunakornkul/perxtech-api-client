@@ -1,6 +1,7 @@
 import { uniq } from 'lodash'
-import { PerxInvoiceRequest, PerxInvoiceRequestTransactionData, PerxInvoiceRequestUsedItem, PerxLoyalty, PerxLoyaltyTransactionRequest, PerxLoyaltyTransactionRequestUserAccount, PerxLoyaltyTransactionReservationRequest } from '..'
+import { PerxInvoiceRequest, PerxInvoiceRequestTransactionData, PerxInvoiceRequestUsedItem, PerxLoyalty, PerxLoyaltyTransactionRequest, PerxLoyaltyTransactionRequestUserAccount, PerxLoyaltyTransactionReservationRequest, PerxMerchant } from '..'
 import { IPerxService, PerxService } from '../client'
+import { PerxCampaign } from '../models'
 import { PerxProxyManager } from '../proxy'
 
 describe('PerxProxyManager', () => {
@@ -17,6 +18,7 @@ describe('PerxProxyManager', () => {
   const testableLoyaltyProgramIdOnPerxServer = (process.env.TEST_PERX_LOYALTY_PROGRAM_ID || '')
   const testableUserIdentifierOnPerxServer = (process.env.TEST_PERX_USER_IDENTIFIER || '')
   const testableUserIdOnPerxServer = (process.env.TEST_PERX_USER_ID || '')
+  const testablePerxTriggerId = (process.env.TEST_CUSTOM_TRIGGER_ID || '')
   // Optional target, if not provide use first record in query to run the test
   const testableMerchantIdentifier = (process.env.TEST_PERX_MERCHANT_IDENTIFIER || '')
   const testableRewardId = +(process.env.TEST_PERX_REWARD_ID || '-1')
@@ -24,6 +26,8 @@ describe('PerxProxyManager', () => {
     .split(',')
     .map((o) => o.trim())
     .filter(Boolean)
+  const testableGameId = (process.env.TEST_PERX_GAME_ID || '')
+  
 
   if (!testableUserIdentifierOnPerxServer) {
     throw new Error('Unable to run test without proper configuration. Please revise your .env file. (in root folder)')
@@ -232,6 +236,31 @@ describe('PerxProxyManager', () => {
     })
   }
 
+  if (testablePerxTriggerId) {
+    it('Allow user to trigger with ruleId', async () => {
+      await expect(user.performCustomTrigger(testablePerxTriggerId)).resolves.not.toThrow()
+    })
+  }
+
+  it('Throw error "The record requested does not exist" when trigger bad ruleId', async ()=> {
+    await expect(user.performCustomTrigger('some-invalid-rule-id')).rejects.toThrow(/record requested does not exist/)
+  })
+
+  describe('can list merchants', () => {
+    it.each`
+      count
+      ${1}
+      ${2}
+      ${3}
+    `('with count $count', async ({ count }) => {
+      const listMerchants = await user.listAllMerchants(1, count)
+      expect(listMerchants.data.length).toEqual(count)
+      expect(listMerchants.data.filter((o) => o instanceof PerxMerchant).length).toEqual(count)
+      expect(uniq(listMerchants.data.map((o) => o.id).filter(Boolean)).length).toEqual(count)
+      expect(listMerchants.error).toBe(undefined)
+    })
+  })
+
   if (testableRewardId && testableMerchantIds.length >= 2) {
     const firstMerchantId = testableMerchantIds[0]
     const secondMerchantId = testableMerchantIds[1]
@@ -339,7 +368,6 @@ describe('PerxProxyManager', () => {
         expect(result.data.invoiceItems.length).toEqual(expectedInvoiceItems)
       })
     })
-
   }
 
   describe('identifier', () => {
@@ -350,5 +378,33 @@ describe('PerxProxyManager', () => {
       })
       expect(resp.accessToken).toBeTruthy()
     })
+  })
+
+  describe('campaign', () => {
+    if (testableGameId) {
+      const campaignIds = testableGameId.split(',').map(Number)
+      it(`can list campaign with campaign type = game`, async () => {
+        const listCampaign = await user.listAllCampaign(1, 50, 'game')
+        const resultCampaignIds = listCampaign.data.map(o => o.id)
+        expect(listCampaign.data.length).toBeGreaterThan(1)
+        expect(listCampaign.data.filter((o) => o instanceof PerxCampaign).length).toBeGreaterThan(1)
+        expect(uniq(listCampaign.data.map((o) => o.id).filter(Boolean)).length).toBeGreaterThan(1)
+        expect(listCampaign.error).toBe(undefined)
+        if (campaignIds) {
+          const doArraysIntersect = (array1: number[], array2:number[]) => array1.some(item1 => array2.includes(item1))
+          expect(doArraysIntersect(resultCampaignIds, campaignIds)).toBe(true)
+        }
+      })
+
+      it(`can get campaign by campaignId`, async () => {
+        if (campaignIds) {
+          for (const id of campaignIds) {
+            const campaignData = await user.getCampaign(id)
+            expect(campaignData).toBeTruthy()
+            expect(campaignData.id).toEqual(id)
+          }
+        }
+      })
+    }
   })
 })

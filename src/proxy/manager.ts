@@ -24,7 +24,10 @@ import {
   BearerTokenResponse,
   PerxRewardResponse,
   PerxVoucherResponse,
+  PerxMerchantsResponse,
+  PerxMerchant,
 } from '..'
+import { PerxCampaign, PerxCampaignsResponse } from '../models'
 import { MerchantInfo } from '../models/MerchantInfo'
 import { PerxPosProxy } from './pos'
 import { PerxUserProxy } from './user'
@@ -198,11 +201,53 @@ export interface IPerxUserProxy {
   queryTransactionsHistory(): Promise<PerxLoyaltyTransactionsHistoryResponse>
   queryTransactionsHistory(page: number): Promise<PerxLoyaltyTransactionsHistoryResponse>
   queryTransactionsHistory(page: number, perPage: number): Promise<PerxLoyaltyTransactionsHistoryResponse>
+  queryTransactionsHistory(page: number, perPage: number, transactionReference?: string): Promise<PerxLoyaltyTransactionsHistoryResponse>
 
   /**
    * Get perx's self customer identity
    */
   getMe(): Promise<PerxCustomer>
+
+  /**
+   * Query all merchants from Perx
+   * @param  {number} page
+   * @param  {number} perPage
+   * @param  {boolean} favorite
+   * @returns
+   */
+  listAllMerchants(page: number, perPage: number): Promise<PerxMerchantsResponse>
+  listAllMerchants(page: number, perPage: number, favorite: boolean): Promise<PerxMerchantsResponse>
+
+  /**
+   * Query merchants by merchant id from Perx
+   * @param  {number} merchantId
+   * @param  {boolean} favorite
+   * @returns
+   */
+  getMerchant(merchantId: number): Promise<PerxMerchant>
+
+  /**
+   * Execute custom trigger on Perx for specific user.
+   * 
+   * @param perxCustomTriggerId 
+   */
+  performCustomTrigger(perxCustomTriggerId: string): Promise<void>
+
+  /**
+   * Query all campaign from Perx
+   */
+  listAllCampaign(page: number, perPage: number): Promise<PerxCampaignsResponse>
+  listAllCampaign(page: number, perPage: number, campaignType: string): Promise<PerxCampaignsResponse>
+
+  /**
+   * Query campaign by campaign id from Perx
+   */
+  getCampaign(campaignId: number): Promise<PerxCampaign>
+
+  /**
+   * Get user access token
+   */
+  getToken(): Promise<IPerxToken>
 }
 
 /**

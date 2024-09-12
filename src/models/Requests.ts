@@ -2,7 +2,7 @@ import { autoserializeAs, inheritSerialization } from 'cerialize'
 import { ISODateTimeSerializer } from '../utils/cerialize'
 import { PerxBaseInvoiceItem, PerxInvoiceItemType } from './Invoice'
 
-export type PerxTransactionRequestDataType = 'purchase' | 'purchase-fix'
+export type PerxTransactionRequestDataType = 'purchase' | 'purchase-fix' | 'revert-purchase-fix' | 'purchase-overall'
 
 /**
  * You may override this class to create your own Custom Transaction Representation.
@@ -63,8 +63,21 @@ export class PerxTransactionReqeust {
     const data = new PerxTransactionRequestData(amount, currency, transactionReference, 'purchase', properties)
     return new PerxTransactionReqeust(userAccountId, data)
   }
-  public static makePurchaseFix(userAccountId: string, amount: number, currency: string, transactionReference: string, properties: Record<string, string | number> = {}, transactionDate: Date): PerxTransactionReqeust {
-    const data = new PerxTransactionRequestData(amount, currency, transactionReference, 'purchase-fix', properties, transactionDate)
+
+  /**
+   * Make custom transaction with custom transactionType.
+   * 
+   * @param transactionType 
+   * @param userAccountId 
+   * @param amount 
+   * @param currency 
+   * @param transactionReference 
+   * @param properties 
+   * @param transactionDate 
+   * @returns 
+   */
+  public static makeCustomTransaction(transactionType: PerxTransactionRequestDataType, userAccountId: string, amount: number, currency: string, transactionReference: string, properties: Record<string, string | number> = {}, transactionDate: Date): PerxTransactionReqeust {
+    const data = new PerxTransactionRequestData(amount, currency, transactionReference, transactionType, properties, transactionDate)
     return new PerxTransactionReqeust(userAccountId, data)
   }
 }
@@ -132,12 +145,24 @@ export class PerxLoyaltyTransactionRequest {
   @autoserializeAs('transaction_reference')
   transactionReference: string | null = null
 
+  /**
+   * Transaction Type is not required.
+   */
+  @autoserializeAs('transaction_type')
+  transactionType: string | undefined = undefined
+
   constructor(userAccount: PerxLoyaltyTransactionRequestUserAccount, loyaltyProgramId: number, points: number, transactionReference: string | null = null, properties: Record<string, string|number> = {}) {
     this.userAccount = userAccount
     this.points = points
     this.loyaltyProgramId = loyaltyProgramId
     this.properties = properties
     this.transactionReference = transactionReference
+  }
+
+  // Attach additional transaction type when needed.
+  public withTransactionType(transactionType: string | undefined): PerxLoyaltyTransactionRequest {
+    this.transactionType = transactionType
+    return this
   }
 
   public static makeBurnRequest(userAccount: PerxRawUserAccount, loyaltyProgramId: number, pointsToBurn: number, transactionReference: string | null = null, properties: Record<string, string|number> = {}): PerxLoyaltyTransactionRequest {

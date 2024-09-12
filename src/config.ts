@@ -4,4 +4,5 @@ export interface PerxConfig {
   clientSecret: string
   tokenDurationInSeconds: number
   lang?: string
+  microSiteBaseUrl?: string
 }

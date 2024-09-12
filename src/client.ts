@@ -39,6 +39,12 @@ import {
   MerchantInfo,
   PerxRewardResponse,
   PerxVoucherResponse,
+  PerxMerchant,
+  PerxMerchantResponse,
+  PerxMerchantsResponse,
+  PerxCampaign,
+  PerxCampaignResponse,
+  PerxCampaignsResponse,
 } from './models'
 
 export interface PerxVoucherScope {
@@ -280,7 +286,50 @@ export interface IPerxUserService {
    * @param page start with 1
    * @param perPage desinate the page size
    */
-  queryLoyaltyTransactionsHistory(userToken: string, page: number, perPage: number): Promise<PerxLoyaltyTransactionsHistoryResponse>
+  queryLoyaltyTransactionsHistory(userToken: string, page: number, perPage: number, transactionReference?: string): Promise<PerxLoyaltyTransactionsHistoryResponse>
+
+  /**
+   * Query all merchants from Perx
+   * @param  {boolean} favorite
+   * @param  {number} perPage
+   * @returns
+   */
+  listAllMerchants(userToken: string, page: number, perPage: number, favorite: boolean | undefined): Promise<PerxMerchantsResponse>
+
+  /**
+   * Query merchants by merchant id from Perx
+   * @param  {number} merchantId
+   * @param  {boolean} favorite
+   * @returns
+   */
+  getMerchant(userToken: string, merchantId: number): Promise<PerxMerchant>
+
+  /**
+   * Execute custom trigger on Perx with specific user.
+   * 
+   * This API is fire & forget API. No response is provided. 
+   * However invalid key will be responsed with Axios error (400 Bad Request)
+   * 
+   * @param userToken 
+   * @param perxCustomTriggerId 
+   */
+  performCustomTrigger(userToken: string, perxCustomTriggerId: string): Promise<void>
+
+  /**
+   * Query all campaign from Perx
+   * @param userToken 
+   * @param page 
+   * @param perPage 
+   * @param campaignType 
+   */
+  listAllCampaign(userToken: string, page: number, perPage: number, campaignType: string | undefined): Promise<PerxCampaignsResponse>
+
+  /**
+   * Query campaign by campaign id from Perx
+   * @param userToken 
+   * @param campaignId 
+   */
+  getCampaign(userToken: string, campaignId: number): Promise<PerxCampaign>
 }
 
 export interface IPerxPosService {
@@ -611,6 +660,28 @@ export class PerxService implements IPerxService {
     return result.data
   }
 
+  /**
+   * According to Perx's response, this API doesn't response any payload.
+   * 
+   * This API is fire & forget.
+   * 
+   * @param userToken 
+   * @param perxCustomTriggerId 
+   * @returns nothing
+   */
+  public async performCustomTrigger(userToken: string, perxCustomTriggerId: string): Promise<void> {
+    const resp = await this.axios.put(`/v4/app_triggers/${perxCustomTriggerId}`, {}, {
+      headers: {
+        authorization: `Bearer ${userToken}`,
+      }
+    })
+    // Just eval for error if status is not 200
+    if (resp && resp.data && resp.status >= 400) {
+      BasePerxResponse.parseAndEval(resp.data, resp.status, BasePerxResponse)
+    }
+    return
+  }
+
   public async getLoyaltyProgram(userToken: string, loyaltyProgramId: string | number): Promise<PerxLoyalty> {
     if (!/^\d+$/.test(`${loyaltyProgramId}`)) {
       throw PerxError.badRequest(`Invalid loyaltyProgramId: ${loyaltyProgramId}, expected loyaltyProgramId as integer`)
@@ -755,7 +826,7 @@ export class PerxService implements IPerxService {
     return result
   }
 
-  public async queryLoyaltyTransactionsHistory(userToken: string, page: number, perPage: number): Promise<PerxLoyaltyTransactionsHistoryResponse> {
+  public async queryLoyaltyTransactionsHistory(userToken: string, page: number, perPage: number, transactionReference?: string): Promise<PerxLoyaltyTransactionsHistoryResponse> {
     const resp = await this.axios.get('/v4/loyalty/transactions_history', {
       headers: {
         authorization: `Bearer ${userToken}`,
@@ -763,11 +834,39 @@ export class PerxService implements IPerxService {
       params: {
         page,
         size: perPage,
+        transaction_reference: transactionReference,
       }
     })
 
     const result = BasePerxResponse.parseAndEval(resp.data, resp.status, PerxLoyaltyTransactionsHistoryResponse)
     return result
+  }
+
+  public async listAllMerchants(userToken: string, page: number,  perPage: number, favorite: boolean | undefined = undefined): Promise<PerxMerchantsResponse> {
+    const resp = await this.axios.get('/v4/merchants', {
+      headers: {
+        authorization: `Bearer ${userToken}`,
+      },
+      params: {
+        favorite,
+        page,
+        size: perPage,
+      }
+    })
+
+    const result = BasePerxResponse.parseAndEval(resp.data, resp.status, PerxMerchantsResponse)
+    return result
+  }
+
+  public async getMerchant(userToken: string, merchantId: number): Promise<PerxMerchant> {
+    const resp = await this.axios.get(`/v4/merchants/${merchantId}`, {
+      headers: {
+        authorization: `Bearer ${userToken}`,
+      },
+    })
+
+    const result = BasePerxResponse.parseAndEval(resp.data, resp.status, PerxMerchantResponse)
+    return result.data
   }
 
   public async createMerchantInfo(applicationToken: string, username: string, email: string, merchantAccountId: number): Promise<MerchantInfo> {
@@ -817,5 +916,39 @@ export class PerxService implements IPerxService {
       out.filter_for_merchants = scope.filterForMerchants
     }
     return out
+  }
+
+  public async listAllCampaign(userToken: string, page: number, perPage: number, campaignType: string | undefined = undefined): Promise<PerxCampaignsResponse> {
+    const resp = await this.axios.get('/v4/campaigns', {
+      headers: {
+        authorization: `Bearer ${userToken}`,
+      },
+      params: {
+        page,
+        size: perPage,
+        campaign_type: campaignType || undefined
+      }
+    })
+
+    const result = BasePerxResponse.parseAndEval(resp.data, resp.status, PerxCampaignsResponse)
+
+    if (result.data) {
+      result.data.forEach((p) => p.configMicrositeContext(userToken, this.config.microSiteBaseUrl || ''))
+    }
+    return result
+  }
+
+  public async getCampaign(userToken: string, campaignId: number): Promise<PerxCampaign> {
+    const resp = await this.axios.get(`/v4/campaigns/${campaignId}`, {
+      headers: {
+        authorization: `Bearer ${userToken}`,
+      },
+    })
+
+    const result = BasePerxResponse.parseAndEval(resp.data, resp.status, PerxCampaignResponse)
+    if (result.data) {
+      result.data.configMicrositeContext(userToken, this.config.microSiteBaseUrl || '')
+    }
+    return result.data
   }
 }
